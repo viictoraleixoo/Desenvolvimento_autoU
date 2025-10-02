@@ -4,13 +4,12 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 
-# Carrega variáveis de ambiente
+# Carrega variáveis de ambiente do .env para testes locais
+# Em produção (Render), esta linha carrega as variáveis do painel do Render
 load_dotenv()
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
 
-load_dotenv()
+# Inicializa o cliente OpenAI lendo a chave da variável de ambiente.
+# A chave de segurança (sk-proj-...) NUNCA deve ser colada aqui!
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) 
 
 app = Flask(__name__)
@@ -22,7 +21,6 @@ def process_email_with_ai(email_text):
     """
     
     # 1. Definição do Prompt (Ações)
-    # Define as categorias e o formato de saída esperado.
     system_prompt = (
         "Você é um classificador de e-mails de uma grande empresa financeira e um gerador de respostas automáticas. "
         "Seu objetivo é classificar o e-mail em uma das categorias: 'Produtivo' ou 'Improdutivo'.\n\n"
@@ -51,8 +49,9 @@ def process_email_with_ai(email_text):
 
     try:
         # 3. Chamada da API
+        # Usamos gpt-4o-mini por ser rápido, inteligente e ideal para JSON
         response = client.chat.completions.create(
-            model="gpt-4o-mini", # Modelo rápido e ideal para classificação e JSON
+            model="gpt-4o-mini", 
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"E-mail a classificar:\n\n---\n{email_text}\n---"}
