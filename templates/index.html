@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoClassify - Classificação Inteligente de E-mail</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container-main { max-width: 800px; margin-top: 50px; }
+        .result-box { border-radius: 0.5rem; padding: 1.5rem; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
+        .produtivo { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .improdutivo { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container container-main">
+        <h1 class="text-center mb-4 text-primary">📧 AutoClassify AI</h1>
+        <p class="text-center lead">Automatize a classificação e resposta de e-mails em **Produtivo** ou **Improdutivo**.</p>
+        
+        <div class="card p-4 mb-4">
+            <h5 class="card-title">Insira o Conteúdo do E-mail</h5>
+            <form id="email-form">
+                <div class="mb-3">
+                    <textarea class="form-control" id="email_content" name="email_content" rows="8" 
+                              placeholder="Cole o corpo do e-mail (Assunto, Remetente, Corpo da Mensagem) aqui..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="submit-btn">
+                    <span id="spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    <span id="btn-text">Classificar e Sugerir Resposta</span>
+                </button>
+            </form>
+        </div>
+
+        <div id="results" class="d-none">
+            <h2 class="mb-3 text-secondary">Resultados da Análise</h2>
+            <div id="classification-result" class="result-box">
+                <h4 id="class-title">Classificação: </h4>
+            </div>
+            
+            <div class="card p-4 mt-4">
+                <h5 class="card-title">Resposta Automática Sugerida:</h5>
+                <p id="suggested-response" class="card-text"></p>
+            </div>
+        </div>
+
+        <div id="error-message" class="alert alert-danger d-none mt-4" role="alert"></div>
+
+    </div>
+
+    <script>
+        document.getElementById('email-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const spinner = document.getElementById('spinner');
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error-message');
+            
+            // Limpa resultados anteriores
+            resultsDiv.classList.add('d-none');
+            errorDiv.classList.add('d-none');
+            
+            // Inicia o estado de loading
+            submitBtn.disabled = true;
+            btnText.textContent = 'Processando...';
+            spinner.classList.remove('d-none');
+
+            // Prepara os dados para envio
+            const formData = new FormData(form);
+
+            fetch('/processar_email', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(result => {
+                const data = result.body;
+                
+                if (result.status !== 200) {
+                    errorDiv.textContent = 'Erro (' + result.status + '): ' + (data.error || 'Ocorreu um erro desconhecido.');
+                    errorDiv.classList.remove('d-none');
+                    return;
+                }
+                
+                // Exibe a Classificação
+                const classTitle = document.getElementById('class-title');
+                const classificationBox = document.getElementById('classification-result');
+                const suggestedResponse = document.getElementById('suggested-response');
+
+                const classification = data.classificacao;
+                const response = data.resposta_sugerida;
+
+                classTitle.innerHTML = `Classificação: <strong class="text-capitalize">${classification}</strong>`;
+                suggestedResponse.textContent = response;
+
+                // Estiliza a caixa com base na classificação
+                classificationBox.classList.remove('produtivo', 'improdutivo');
+                if (classification === 'Produtivo') {
+                    classificationBox.classList.add('produtivo');
+                } else if (classification === 'Improdutivo') {
+                    classificationBox.classList.add('improdutivo');
+                }
+                
+                resultsDiv.classList.remove('d-none');
+
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                errorDiv.textContent = 'Erro de rede ou comunicação: ' + error.message;
+                errorDiv.classList.remove('d-none');
+            })
+            .finally(() => {
+                // Finaliza o estado de loading
+                submitBtn.disabled = false;
+                btnText.textContent = 'Classificar e Sugerir Resposta';
+                spinner.classList.add('d-none');
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
